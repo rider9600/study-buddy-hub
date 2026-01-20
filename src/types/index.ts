@@ -14,6 +14,7 @@ export interface Task {
   deadline?: string;
   priority: 'low' | 'medium' | 'high';
   status: 'pending' | 'completed';
+  frequency?: 'once' | 'daily';
   subjectId?: string;
   projectId?: string;
   goalId?: string;
@@ -21,14 +22,22 @@ export interface Task {
   completedAt?: string;
 }
 
+export interface TimeSlot {
+  day: 'Monday' | 'Tuesday' | 'Wednesday' | 'Thursday' | 'Friday' | 'Saturday' | 'Sunday';
+  startTime: string; // HH:mm format
+  endTime: string; // HH:mm format
+}
+
 export interface Subject {
   id: string;
   name: string;
   facultyName?: string;
   schedule?: string;
+  timeSlots?: TimeSlot[];
   color: string;
   syllabus?: string[];
   createdAt: string;
+  userId?: string;
 }
 
 export interface StudyMaterial {

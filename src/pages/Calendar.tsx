@@ -1,8 +1,8 @@
-import { useState, useMemo } from 'react';
-import { useData } from '@/contexts/DataContext';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
+import { useState, useMemo } from "react";
+import { useData } from "@/contexts/DataContext";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import {
   format,
   startOfMonth,
@@ -16,9 +16,13 @@ import {
   isToday,
   startOfWeek,
   endOfWeek,
-} from 'date-fns';
-import { ChevronLeft, ChevronRight, Calendar as CalendarIcon } from 'lucide-react';
-import type { CalendarEvent } from '@/types';
+} from "date-fns";
+import {
+  ChevronLeft,
+  ChevronRight,
+  Calendar as CalendarIcon,
+} from "lucide-react";
+import type { CalendarEvent } from "@/types";
 
 export default function CalendarPage() {
   const { tasks, subjects, projects, goals } = useData();
@@ -36,11 +40,59 @@ export default function CalendarPage() {
           id: task.id,
           title: task.title,
           date: task.deadline,
-          type: 'task',
+          type: "task",
           relatedId: task.id,
-          color: task.status === 'completed' ? '#22c55e' : 
-                 task.priority === 'high' ? '#ef4444' : 
-                 task.priority === 'medium' ? '#f59e0b' : '#6b7280',
+          color:
+            task.status === "completed"
+              ? "#22c55e"
+              : task.priority === "high"
+                ? "#ef4444"
+                : task.priority === "medium"
+                  ? "#f59e0b"
+                  : "#6b7280",
+        });
+      }
+    });
+
+    // Subject class schedules - recurring weekly events
+    subjects.forEach((subject) => {
+      if (subject.timeSlots) {
+        subject.timeSlots.forEach((timeSlot) => {
+          // Generate class events for the visible month
+          const monthStart = startOfMonth(currentMonth);
+          const monthEnd = endOfMonth(currentMonth);
+
+          // Find all occurrences of this day in the month
+          const dayOfWeek = [
+            "Sunday",
+            "Monday",
+            "Tuesday",
+            "Wednesday",
+            "Thursday",
+            "Friday",
+            "Saturday",
+          ].indexOf(timeSlot.day);
+
+          let currentDate = new Date(monthStart);
+          while (currentDate <= monthEnd) {
+            if (currentDate.getDay() === dayOfWeek) {
+              const classDateTime = new Date(currentDate);
+              const [hours, minutes] = timeSlot.startTime
+                .split(":")
+                .map(Number);
+              classDateTime.setHours(hours, minutes, 0, 0);
+
+              allEvents.push({
+                id: `${subject.id}-${timeSlot.day}-${currentDate.getTime()}`,
+                title: `📚 ${subject.name}`,
+                date: classDateTime.toISOString(),
+                type: "class",
+                relatedId: subject.id,
+                color: subject.color,
+              });
+            }
+            currentDate.setDate(currentDate.getDate() + 1);
+          }
         });
       }
     });
@@ -52,9 +104,9 @@ export default function CalendarPage() {
           id: `project-${project.id}`,
           title: `📁 ${project.name}`,
           date: project.deadline,
-          type: 'deadline',
+          type: "deadline",
           relatedId: project.id,
-          color: '#8b5cf6',
+          color: "#8b5cf6",
         });
       }
       project.milestones.forEach((milestone) => {
@@ -63,9 +115,9 @@ export default function CalendarPage() {
             id: `milestone-${milestone.id}`,
             title: `🎯 ${milestone.title}`,
             date: milestone.dueDate,
-            type: 'milestone',
+            type: "milestone",
             relatedId: project.id,
-            color: milestone.completed ? '#22c55e' : '#06b6d4',
+            color: milestone.completed ? "#22c55e" : "#06b6d4",
           });
         }
       });
@@ -79,23 +131,28 @@ export default function CalendarPage() {
             id: `goal-milestone-${milestone.id}`,
             title: `⭐ ${milestone.title}`,
             date: milestone.dueDate,
-            type: 'milestone',
+            type: "milestone",
             relatedId: goal.id,
-            color: milestone.completed ? '#22c55e' : '#ec4899',
+            color: milestone.completed ? "#22c55e" : "#ec4899",
           });
         }
       });
     });
 
-    return allEvents;
-  }, [tasks, projects, goals]);
+    return allEvents.sort(
+      (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime(),
+    );
+  }, [tasks, projects, goals, subjects, currentMonth]);
 
   // Get days for calendar grid
   const monthStart = startOfMonth(currentMonth);
   const monthEnd = endOfMonth(currentMonth);
   const calendarStart = startOfWeek(monthStart);
   const calendarEnd = endOfWeek(monthEnd);
-  const calendarDays = eachDayOfInterval({ start: calendarStart, end: calendarEnd });
+  const calendarDays = eachDayOfInterval({
+    start: calendarStart,
+    end: calendarEnd,
+  });
 
   // Get events for a specific day
   const getEventsForDay = (date: Date) => {
@@ -110,7 +167,9 @@ export default function CalendarPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Calendar</h1>
-          <p className="text-muted-foreground mt-1">View all your deadlines and events</p>
+          <p className="text-muted-foreground mt-1">
+            View all your deadlines and events
+          </p>
         </div>
       </div>
 
@@ -119,7 +178,7 @@ export default function CalendarPage() {
         <Card className="shadow-soft">
           <CardHeader className="flex flex-row items-center justify-between pb-4">
             <CardTitle className="text-xl">
-              {format(currentMonth, 'MMMM yyyy')}
+              {format(currentMonth, "MMMM yyyy")}
             </CardTitle>
             <div className="flex items-center gap-2">
               <Button
@@ -148,7 +207,7 @@ export default function CalendarPage() {
           <CardContent>
             {/* Day headers */}
             <div className="grid grid-cols-7 mb-2">
-              {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
+              {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
                 <div
                   key={day}
                   className="text-center text-sm font-medium text-muted-foreground py-2"
@@ -172,19 +231,19 @@ export default function CalendarPage() {
                     onClick={() => setSelectedDate(day)}
                     className={`
                       min-h-24 p-2 rounded-lg text-left transition-colors
-                      ${isCurrentMonth ? 'bg-card' : 'bg-muted/30'}
-                      ${isSelected ? 'ring-2 ring-primary' : 'hover:bg-muted'}
-                      ${today ? 'bg-primary/5' : ''}
+                      ${isCurrentMonth ? "bg-card" : "bg-muted/30"}
+                      ${isSelected ? "ring-2 ring-primary" : "hover:bg-muted"}
+                      ${today ? "bg-primary/5" : ""}
                     `}
                   >
                     <span
                       className={`
                         inline-flex items-center justify-center w-7 h-7 rounded-full text-sm
-                        ${today ? 'bg-primary text-primary-foreground font-bold' : ''}
-                        ${!isCurrentMonth ? 'text-muted-foreground' : ''}
+                        ${today ? "bg-primary text-primary-foreground font-bold" : ""}
+                        ${!isCurrentMonth ? "text-muted-foreground" : ""}
                       `}
                     >
-                      {format(day, 'd')}
+                      {format(day, "d")}
                     </span>
                     <div className="mt-1 space-y-1">
                       {dayEvents.slice(0, 3).map((event) => (
@@ -217,7 +276,9 @@ export default function CalendarPage() {
           <CardHeader>
             <CardTitle className="text-lg flex items-center gap-2">
               <CalendarIcon className="w-5 h-5" />
-              {selectedDate ? format(selectedDate, 'EEEE, MMMM d') : 'Select a date'}
+              {selectedDate
+                ? format(selectedDate, "EEEE, MMMM d")
+                : "Select a date"}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -248,7 +309,7 @@ export default function CalendarPage() {
                       <div className="flex-1 min-w-0">
                         <p className="font-medium text-sm">{event.title}</p>
                         <p className="text-xs text-muted-foreground mt-1">
-                          {format(parseISO(event.date), 'h:mm a')}
+                          {format(parseISO(event.date), "h:mm a")}
                         </p>
                         <Badge variant="outline" className="mt-2 text-xs">
                           {event.type}

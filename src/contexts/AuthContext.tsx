@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import type { User } from '@/types';
-
-interface AuthContextType {
+interface AuthContextType 
+{
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
@@ -9,33 +9,29 @@ interface AuthContextType {
   signup: (email: string, password: string, name: string) => Promise<boolean>;
   logout: () => void;
 }
-
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
-
-export function AuthProvider({ children }: { children: React.ReactNode }) {
+export function AuthProvider({ children }: { children: React.ReactNode }) 
+{
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-
-  // Check for existing session on mount
   useEffect(() => {
     const storedUser = localStorage.getItem('studyflow_user');
-    if (storedUser) {
-      try {
-        setUser(JSON.parse(storedUser));
-      } catch {
-        localStorage.removeItem('studyflow_user');
-      }
+    if(storedUser) 
+    {
+    try 
+    {
+    setUser(JSON.parse(storedUser));
+    }
+    catch
+    {
+    localStorage.removeItem('studyflow_user');
+    }
     }
     setIsLoading(false);
-  }, []);
-
+  },[]);
   const login = useCallback(async (email: string, password: string): Promise<boolean> => {
-    // Simulate authentication - check stored users
     const storedUsers = localStorage.getItem('studyflow_users');
-    const users: Record<string, { password: string; user: User }> = storedUsers 
-      ? JSON.parse(storedUsers) 
-      : {};
-
+    const users: Record<string, { password: string; user: User }> = storedUsers?JSON.parse(storedUsers): {};
     if (users[email] && users[email].password === password) {
       setUser(users[email].user);
       localStorage.setItem('studyflow_user', JSON.stringify(users[email].user));
@@ -43,36 +39,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
     return false;
   }, []);
-
-  const signup = useCallback(async (email: string, password: string, name: string): Promise<boolean> => {
+  const signup=useCallback(async (email: string, password: string, name: string): Promise<boolean> => {
     const storedUsers = localStorage.getItem('studyflow_users');
-    const users: Record<string, { password: string; user: User }> = storedUsers 
-      ? JSON.parse(storedUsers) 
-      : {};
-
-    if (users[email]) {
-      return false; // User already exists
+    const users: Record<string, { password: string; user: User }> = storedUsers? JSON.parse(storedUsers): {};
+    if (users[email]) 
+    {
+      return false;
     }
-
-    const newUser: User = {
+    const newUser:User= 
+    {
       id: crypto.randomUUID(),
       email,
       name,
       createdAt: new Date().toISOString(),
     };
-
     users[email] = { password, user: newUser };
     localStorage.setItem('studyflow_users', JSON.stringify(users));
     setUser(newUser);
     localStorage.setItem('studyflow_user', JSON.stringify(newUser));
     return true;
-  }, []);
-
+  },[]);
   const logout = useCallback(() => {
     setUser(null);
     localStorage.removeItem('studyflow_user');
   }, []);
-
   return (
     <AuthContext.Provider value={{
       user,
