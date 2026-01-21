@@ -21,6 +21,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Calendar as CalendarIcon,
+  Clock,
 } from "lucide-react";
 import type { CalendarEvent } from "@/types";
 
@@ -33,24 +34,55 @@ export default function CalendarPage() {
   const events = useMemo<CalendarEvent[]>(() => {
     const allEvents: CalendarEvent[] = [];
 
-    // Tasks with deadlines
+    // Tasks with task_date
     tasks.forEach((task) => {
-      if (task.deadline) {
-        allEvents.push({
-          id: task.id,
-          title: task.title,
-          date: task.deadline,
-          type: "task",
-          relatedId: task.id,
-          color:
-            task.status === "completed"
-              ? "#22c55e"
-              : task.priority === "high"
-                ? "#ef4444"
-                : task.priority === "medium"
-                  ? "#f59e0b"
-                  : "#6b7280",
-        });
+      if (task.task_date) {
+        if (task.frequency === "daily") {
+          // For daily tasks, show on every day from task_date onwards in the visible month
+          const taskDate = new Date(task.task_date);
+          const monthStart = startOfMonth(currentMonth);
+          const monthEnd = endOfMonth(currentMonth);
+
+          // Start from either the task's start date or the beginning of visible month, whichever is later
+          let currentDate = taskDate > monthStart ? taskDate : monthStart;
+
+          // Add event for each day until end of month
+          while (currentDate <= monthEnd) {
+            allEvents.push({
+              id: `${task.id}-${currentDate.toISOString().split("T")[0]}`,
+              title: task.title,
+              date: `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, "0")}-${String(currentDate.getDate()).padStart(2, "0")}`,
+              type: "task",
+              relatedId: task.id,
+              color:
+                task.status === "completed"
+                  ? "#22c55e"
+                  : task.priority === "high"
+                    ? "#ef4444"
+                    : task.priority === "medium"
+                      ? "#f59e0b"
+                      : "#6b7280",
+            });
+            currentDate.setDate(currentDate.getDate() + 1);
+          }
+        } else {
+          // One-time tasks - show only on their specific date
+          allEvents.push({
+            id: task.id,
+            title: task.title,
+            date: task.task_date,
+            type: "task",
+            relatedId: task.id,
+            color:
+              task.status === "completed"
+                ? "#22c55e"
+                : task.priority === "high"
+                  ? "#ef4444"
+                  : task.priority === "medium"
+                    ? "#f59e0b"
+                    : "#6b7280",
+          });
+        }
       }
     });
 
@@ -97,7 +129,7 @@ export default function CalendarPage() {
       }
     });
 
-    // Project deadlines and milestones
+    // Project deadlines (no milestones in database)
     projects.forEach((project) => {
       if (project.deadline) {
         allEvents.push({
@@ -109,35 +141,9 @@ export default function CalendarPage() {
           color: "#8b5cf6",
         });
       }
-      project.milestones.forEach((milestone) => {
-        if (milestone.dueDate) {
-          allEvents.push({
-            id: `milestone-${milestone.id}`,
-            title: `🎯 ${milestone.title}`,
-            date: milestone.dueDate,
-            type: "milestone",
-            relatedId: project.id,
-            color: milestone.completed ? "#22c55e" : "#06b6d4",
-          });
-        }
-      });
     });
 
-    // Goal milestones
-    goals.forEach((goal) => {
-      goal.milestones.forEach((milestone) => {
-        if (milestone.dueDate) {
-          allEvents.push({
-            id: `goal-milestone-${milestone.id}`,
-            title: `⭐ ${milestone.title}`,
-            date: milestone.dueDate,
-            type: "milestone",
-            relatedId: goal.id,
-            color: milestone.completed ? "#22c55e" : "#ec4899",
-          });
-        }
-      });
-    });
+    // Goals don't have milestones in database, skip
 
     return allEvents.sort(
       (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime(),
@@ -156,7 +162,19 @@ export default function CalendarPage() {
 
   // Get events for a specific day
   const getEventsForDay = (date: Date) => {
-    return events.filter((event) => isSameDay(parseISO(event.date), date));
+    return events.filter((event) => {
+      // Parse date string - handle both ISO datetime and date-only strings
+      let eventDate: Date;
+      if (event.date.includes("T")) {
+        // Full ISO datetime string
+        eventDate = parseISO(event.date);
+      } else {
+        // Date-only string (YYYY-MM-DD) - parse as local date to avoid timezone issues
+        const [year, month, day] = event.date.split("-").map(Number);
+        eventDate = new Date(year, month - 1, day);
+      }
+      return isSameDay(eventDate, date);
+    });
   };
 
   // Get events for selected date
@@ -308,9 +326,14 @@ export default function CalendarPage() {
                       />
                       <div className="flex-1 min-w-0">
                         <p className="font-medium text-sm">{event.title}</p>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          {format(parseISO(event.date), "h:mm a")}
-                        </p>
+                        {event.date.includes("T") && (
+                          <p className="text-xs text-muted-foreground mt-1.5 flex items-center gap-1">
+                            <Clock className="w-3 h-3 opacity-70" />
+                            <span className="font-mono bg-muted/40 px-1.5 py-0.5 rounded">
+                              {format(parseISO(event.date), "h:mm a")}
+                            </span>
+                          </p>
+                        )}
                         <Badge variant="outline" className="mt-2 text-xs">
                           {event.type}
                         </Badge>

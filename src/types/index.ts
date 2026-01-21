@@ -9,17 +9,18 @@ export interface User {
 
 export interface Task {
   id: string;
+  user_id: string;
   title: string;
   description?: string;
-  deadline?: string;
   priority: 'low' | 'medium' | 'high';
   status: 'pending' | 'completed';
-  frequency?: 'once' | 'daily';
-  subjectId?: string;
-  projectId?: string;
-  goalId?: string;
-  createdAt: string;
-  completedAt?: string;
+  frequency: 'once' | 'daily';
+  subject_id?: string;
+  project_id?: string;
+  goal_id?: string;
+  task_date: string; // Date in YYYY-MM-DD format
+  created_at: string;
+  completed_at?: string;
 }
 
 export interface TimeSlot {
@@ -30,66 +31,46 @@ export interface TimeSlot {
 
 export interface Subject {
   id: string;
+  user_id: string;
   name: string;
-  facultyName?: string;
-  schedule?: string;
-  timeSlots?: TimeSlot[];
+  faculty_name?: string;
   color: string;
   syllabus?: string[];
-  createdAt: string;
-  userId?: string;
-}
-
-export interface StudyMaterial {
-  id: string;
-  subjectId: string;
-  title: string;
-  type: 'file' | 'link' | 'reference';
-  url?: string;
-  content?: string;
-  tags: string[];
-  createdAt: string;
+  time_slots?: TimeSlot[];
+  created_at: string;
 }
 
 export interface Note {
   id: string;
-  title: string;
+  user_id: string;
+  title?: string;
   content: string;
-  subjectId?: string;
-  projectId?: string;
-  goalId?: string;
-  tags: string[];
-  createdAt: string;
-  updatedAt: string;
+  subject_id?: string;
+  project_id?: string;
+  tags?: string[];
+  created_at: string;
+  updated_at?: string;
 }
 
 export interface Project {
   id: string;
+  user_id: string;
   name: string;
   description?: string;
   deadline?: string;
-  status: 'active' | 'completed' | 'archived';
-  teamMembers?: string[];
-  milestones: Milestone[];
-  createdAt: string;
-}
-
-export interface Milestone {
-  id: string;
-  title: string;
-  completed: boolean;
-  dueDate?: string;
+  team_members?: string[];
+  created_at: string;
 }
 
 export interface Goal {
   id: string;
-  name: string;
+  user_id: string;
+  title: string;
   description?: string;
-  category: 'skill' | 'habit' | 'learning' | 'other';
+  category?: string;
   duration?: string;
-  progress: number;
-  milestones: Milestone[];
-  createdAt: string;
+  progress_percentage?: number;
+  created_at: string;
 }
 
 export interface CalendarEvent {
@@ -99,4 +80,52 @@ export interface CalendarEvent {
   type: 'task' | 'class' | 'milestone' | 'deadline' | 'reminder';
   relatedId?: string;
   color?: string;
+}
+
+export interface DailyStat {
+  id: string;
+  user_id: string;
+  stat_date: string;
+  tasks_completed: number;
+  tasks_created: number;
+  tasks_pending: number;
+  high_priority_completed: number;
+  medium_priority_completed: number;
+  low_priority_completed: number;
+  notes_created: number;
+  subjects_studied: number;
+  study_sessions: number;
+  total_study_minutes: number;
+  projects_worked_on: number;
+  goals_progress_updated: number;
+  productivity_score: number;
+  consistency_score: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ActivityLog {
+  id: string;
+  user_id: string;
+  activity_type: string;
+  activity_description: string | null;
+  entity_type: string | null;
+  entity_id: string | null;
+  activity_date: string;
+  metadata: any | null;
+  created_at: string;
+}
+
+export interface UserStreak {
+  id: string;
+  user_id: string;
+  streak_type: string;
+  current_streak: number;
+  longest_streak: number;
+  last_activity_date: string | null;
+  streak_start_date: string | null;
+  longest_streak_start_date: string | null;
+  longest_streak_end_date: string | null;
+  created_at: string;
+  updated_at: string;
 }

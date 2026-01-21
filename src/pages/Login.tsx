@@ -1,16 +1,23 @@
-import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { BookOpen, Loader2 } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
+import { useState } from "react";
+import { useNavigate, Link } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { BookOpen, Loader2 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 export default function Login() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
@@ -20,28 +27,29 @@ export default function Login() {
     e.preventDefault();
     if (!email || !password) {
       toast({
-        title: 'Missing fields',
-        description: 'Please enter both email and password.',
-        variant: 'destructive',
+        title: "Missing fields",
+        description: "Please enter both email and password.",
+        variant: "destructive",
       });
       return;
     }
 
     setIsLoading(true);
-    const success = await login(email, password);
+    const result = await login(email, password);
     setIsLoading(false);
 
-    if (success) {
+    if (result.success) {
       toast({
-        title: 'Welcome back!',
-        description: 'You have successfully logged in.',
+        title: "Welcome back!",
+        description: "You have successfully logged in.",
       });
-      navigate('/dashboard');
+      navigate("/dashboard");
     } else {
       toast({
-        title: 'Login failed',
-        description: 'Invalid email or password. Please try again.',
-        variant: 'destructive',
+        title: "Login failed",
+        description:
+          result.error || "Invalid email or password. Please try again.",
+        variant: "destructive",
       });
     }
   };
@@ -49,7 +57,7 @@ export default function Login() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-background px-4">
       <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-accent/5" />
-      
+
       <Card className="w-full max-w-md shadow-soft animate-fade-in relative">
         <CardHeader className="text-center space-y-4">
           <div className="mx-auto w-14 h-14 bg-primary rounded-xl flex items-center justify-center">
@@ -62,7 +70,7 @@ export default function Login() {
             </CardDescription>
           </div>
         </CardHeader>
-        
+
         <form onSubmit={handleSubmit}>
           <CardContent className="space-y-4">
             <div className="space-y-2">
@@ -77,7 +85,7 @@ export default function Login() {
                 disabled={isLoading}
               />
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="password">Password</Label>
               <Input
@@ -91,7 +99,7 @@ export default function Login() {
               />
             </div>
           </CardContent>
-          
+
           <CardFooter className="flex flex-col gap-4">
             <Button type="submit" className="w-full" disabled={isLoading}>
               {isLoading ? (
@@ -100,13 +108,16 @@ export default function Login() {
                   Signing in...
                 </>
               ) : (
-                'Sign in'
+                "Sign in"
               )}
             </Button>
-            
+
             <p className="text-sm text-muted-foreground text-center">
-              Don't have an account?{' '}
-              <Link to="/signup" className="text-primary hover:underline font-medium">
+              Don't have an account?{" "}
+              <Link
+                to="/signup"
+                className="text-primary hover:underline font-medium"
+              >
                 Create one
               </Link>
             </p>

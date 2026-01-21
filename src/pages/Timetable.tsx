@@ -32,8 +32,8 @@ export default function Timetable() {
 
     // Populate schedule with subject time slots
     subjects.forEach((subject) => {
-      if (subject.timeSlots) {
-        subject.timeSlots.forEach((slot) => {
+      if (subject.time_slots) {
+        subject.time_slots.forEach((slot) => {
           schedule[slot.day].push({
             subject: {
               id: subject.id,
@@ -60,8 +60,8 @@ export default function Timetable() {
   const allTimes = useMemo(() => {
     const times = new Set<string>();
     subjects.forEach((subject) => {
-      if (subject.timeSlots) {
-        subject.timeSlots.forEach((slot) => {
+      if (subject.time_slots) {
+        subject.time_slots.forEach((slot) => {
           times.add(slot.startTime);
           times.add(slot.endTime);
         });
@@ -71,7 +71,7 @@ export default function Timetable() {
   }, [subjects]);
 
   const hasSchedules = subjects.some(
-    (s) => s.timeSlots && s.timeSlots.length > 0,
+    (s) => s.time_slots && s.time_slots.length > 0,
   );
 
   return (

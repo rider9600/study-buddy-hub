@@ -92,11 +92,10 @@ export default function Notes() {
         updateNote(editingNote.id, {
           title: title,
           content: formData.content,
-          subjectId:
+          subject_id:
             formData.subjectId === "none" ? undefined : formData.subjectId,
-          projectId:
+          project_id:
             formData.projectId === "none" ? undefined : formData.projectId,
-          goalId: formData.goalId === "none" ? undefined : formData.goalId,
           tags: tagsArray,
         });
       } else {
@@ -104,11 +103,10 @@ export default function Notes() {
         addNote({
           title: title,
           content: formData.content,
-          subjectId:
+          subject_id:
             formData.subjectId === "none" ? undefined : formData.subjectId,
-          projectId:
+          project_id:
             formData.projectId === "none" ? undefined : formData.projectId,
-          goalId: formData.goalId === "none" ? undefined : formData.goalId,
           tags: tagsArray,
         });
       }
@@ -126,9 +124,9 @@ export default function Notes() {
     setFormData({
       title: note.title,
       content: note.content,
-      subjectId: note.subjectId || "none",
-      projectId: note.projectId || "none",
-      goalId: note.goalId || "none",
+      subjectId: note.subject_id || "none",
+      projectId: note.project_id || "none",
+      goalId: "none",
       tags: note.tags.join(", "),
     });
     setIsDialogOpen(true);
@@ -156,13 +154,13 @@ export default function Notes() {
         );
 
       const matchesSubject =
-        filterSubject === "all" || note.subjectId === filterSubject;
+        filterSubject === "all" || note.subject_id === filterSubject;
 
       return matchesSearch && matchesSubject;
     })
     .sort(
       (a, b) =>
-        new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
+        new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
     );
 
   return (
@@ -337,19 +335,19 @@ export default function Notes() {
               )}
 
               <div className="flex flex-wrap gap-2">
-                {viewingNote?.subjectId &&
-                  subjects.find((s) => s.id === viewingNote.subjectId) && (
+                {viewingNote?.subject_id &&
+                  subjects.find((s) => s.id === viewingNote.subject_id) && (
                     <Badge
                       variant="secondary"
                       style={{
-                        backgroundColor: `${subjects.find((s) => s.id === viewingNote.subjectId)?.color}20`,
+                        backgroundColor: `${subjects.find((s) => s.id === viewingNote.subject_id)?.color}20`,
                         color: subjects.find(
-                          (s) => s.id === viewingNote.subjectId,
+                          (s) => s.id === viewingNote.subject_id,
                         )?.color,
                       }}
                     >
                       {
-                        subjects.find((s) => s.id === viewingNote.subjectId)
+                        subjects.find((s) => s.id === viewingNote.subject_id)
                           ?.name
                       }
                     </Badge>
@@ -363,14 +361,8 @@ export default function Notes() {
 
               <div className="text-xs text-muted-foreground">
                 Created:{" "}
-                {viewingNote && format(parseISO(viewingNote.createdAt), "PPp")}
-                {viewingNote?.createdAt !== viewingNote?.updatedAt && (
-                  <span className="ml-2">
-                    • Updated:{" "}
-                    {viewingNote &&
-                      format(parseISO(viewingNote.updatedAt), "PPp")}
-                  </span>
-                )}
+                {viewingNote && format(parseISO(viewingNote.created_at), "PPp")}
+                {/* Note: No update timestamp in current schema */}
               </div>
             </div>
 
@@ -463,17 +455,17 @@ export default function Notes() {
                 </p>
 
                 <div className="flex flex-wrap gap-2 mb-3">
-                  {note.subjectId &&
-                    subjects.find((s) => s.id === note.subjectId) && (
+                  {note.subject_id &&
+                    subjects.find((s) => s.id === note.subject_id) && (
                       <Badge
                         variant="secondary"
                         style={{
-                          backgroundColor: `${subjects.find((s) => s.id === note.subjectId)?.color}20`,
-                          color: subjects.find((s) => s.id === note.subjectId)
+                          backgroundColor: `${subjects.find((s) => s.id === note.subject_id)?.color}20`,
+                          color: subjects.find((s) => s.id === note.subject_id)
                             ?.color,
                         }}
                       >
-                        {subjects.find((s) => s.id === note.subjectId)?.name}
+                        {subjects.find((s) => s.id === note.subject_id)?.name}
                       </Badge>
                     )}
                   {note.tags.slice(0, 2).map((tag) => (
@@ -489,7 +481,7 @@ export default function Notes() {
                 </div>
 
                 <p className="text-xs text-muted-foreground">
-                  Updated {format(parseISO(note.updatedAt), "MMM d, h:mm a")}
+                  Created {format(parseISO(note.created_at), "MMM d, h:mm a")}
                 </p>
               </CardContent>
             </Card>

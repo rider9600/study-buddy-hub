@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { useData } from "@/contexts/DataContext";
 import { useAuth } from "@/contexts/AuthContext";
+import { Task, Subject, Project, Note, Goal } from "@/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -36,6 +37,9 @@ import {
   AlertCircle,
   TrendingUp,
   BarChart3,
+  Activity,
+  CheckCircle,
+  BookOpen,
 } from "lucide-react";
 import {
   LineChart,
@@ -53,8 +57,17 @@ import {
 } from "recharts";
 
 export default function Dashboard() {
-  const { user } = useAuth();
-  const { tasks, subjects, notes, projects, goals } = useData();
+  const { user, debugUser } = useAuth();
+  const {
+    tasks,
+    subjects,
+    notes,
+    projects,
+    goals,
+    recentActivities,
+    dailyStats,
+    currentStreak,
+  } = useData();
   const [productivityView, setProductivityView] = useState<"week" | "month">(
     "week",
   );
@@ -62,21 +75,15 @@ export default function Dashboard() {
   const pendingTasks = tasks.filter((t) => t.status === "pending");
   const todaysTasks = pendingTasks.slice(0, 5);
 
-  const overdueTasks = pendingTasks.filter(
-    (t) => t.deadline && isPast(parseISO(t.deadline)),
-  );
-  const todayTasks = pendingTasks.filter(
-    (t) => t.deadline && isToday(parseISO(t.deadline)),
-  );
-  const thisWeekTasks = pendingTasks.filter(
-    (t) => t.deadline && isThisWeek(parseISO(t.deadline)),
-  );
+  const overdueTasks: Task[] = []; // No overdue tasks since we removed deadlines
+  const todayTasks: Task[] = []; // No deadline-based filtering
+  const thisWeekTasks: Task[] = []; // No deadline-based filtering
 
-  const activeProjects = projects.filter((p) => p.status === "active");
+  const activeProjects = projects; // All projects are considered active
   const recentNotes = [...notes]
     .sort(
       (a, b) =>
-        new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
+        new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
     )
     .slice(0, 3);
 
@@ -111,7 +118,7 @@ export default function Dashboard() {
       }
 
       // Subject-linked tasks get slight bonus
-      if (task.subjectId) {
+      if (task.subject_id) {
         weight *= 1.2;
       }
 
@@ -126,21 +133,17 @@ export default function Dashboard() {
 
       // Get tasks completed on this day (regardless of original deadline)
       const completedTasks = tasks.filter((task) => {
-        if (task.status !== "completed" || !task.completedAt) return false;
-        const completedDate = parseISO(task.completedAt);
+        if (task.status !== "completed" || !task.completed_at) return false;
+        const completedDate = parseISO(task.completed_at);
         return completedDate >= dayStart && completedDate <= dayEnd;
       });
 
-      // Get all pending tasks for this day (includes overdue and current day tasks)
+      // Get all pending tasks for this day (all incomplete tasks are considered pending)
       const pendingTasks = tasks.filter((task) => {
         if (task.status === "completed") return false;
 
-        // If task has no deadline, it's always pending
-        if (!task.deadline) return true;
-
-        // If task deadline is today or past, it's pending for today
-        const taskDate = parseISO(task.deadline);
-        return taskDate <= dayEnd;
+        // All pending tasks are included since we don't have deadlines
+        return true;
       });
 
       // Calculate weights
@@ -170,15 +173,15 @@ export default function Dashboard() {
       // Get additional info for tooltip
       const dayName = format(day, "EEEE") as any;
       const studySessions = subjects.reduce((count, subject) => {
-        if (!subject.timeSlots) return count;
+        if (!subject.time_slots) return count;
         return (
           count +
-          subject.timeSlots.filter((slot) => slot.day === dayName).length
+          subject.time_slots.filter((slot) => slot.day === dayName).length
         );
       }, 0);
 
       const dayNotes = notes.filter((note) => {
-        const createdDate = parseISO(note.createdAt);
+        const createdDate = parseISO(note.created_at);
         return createdDate >= dayStart && createdDate <= dayEnd;
       }).length;
 
@@ -211,8 +214,8 @@ export default function Dashboard() {
 
     // Get tasks completed on this day
     const completedTasks = tasks.filter((task) => {
-      if (task.status !== "completed" || !task.completedAt) return false;
-      const completedDate = parseISO(task.completedAt);
+      if (task.status !== "completed" || !task.completed_at) return false;
+      const completedDate = parseISO(task.completed_at);
       return completedDate >= dayStart && completedDate <= dayEnd;
     });
 
@@ -220,12 +223,8 @@ export default function Dashboard() {
     const pendingTasks = tasks.filter((task) => {
       if (task.status === "completed") return false;
 
-      // If task has no deadline, it's always pending
-      if (!task.deadline) return true;
-
-      // If task deadline is today or past, it's pending for today
-      const taskDate = parseISO(task.deadline);
-      return taskDate <= dayEnd;
+      // Deadline feature removed - all incomplete tasks are pending
+      return true;
     });
 
     console.log(`📊 SUMMARY:`);
@@ -255,7 +254,7 @@ export default function Dashboard() {
       if (task.frequency === "daily") weight *= 1.5;
 
       // Subject bonus
-      if (task.subjectId) weight *= 1.2;
+      if (task.subject_id) weight *= 1.2;
 
       totalCompletedWeight += weight;
 
@@ -267,10 +266,10 @@ export default function Dashboard() {
         `   Frequency: ${task.frequency || "once"} ${task.frequency === "daily" ? "(+50% bonus)" : ""}`,
       );
       console.log(
-        `   Subject-linked: ${task.subjectId ? "Yes (+20% bonus)" : "No"}`,
+        `   Subject-linked: ${task.subject_id ? "Yes (+20% bonus)" : "No"}`,
       );
       console.log(`   Final Weight: ${weight.toFixed(2)}`);
-      console.log(`   Completed At: ${task.completedAt}`);
+      console.log(`   Completed At: ${task.completed_at}`);
     });
 
     console.log(`\n📅 PENDING TASKS FOR THIS DAY:`);
@@ -291,7 +290,7 @@ export default function Dashboard() {
       }
 
       if (task.frequency === "daily") weight *= 1.5;
-      if (task.subjectId) weight *= 1.2;
+      if (task.subject_id) weight *= 1.2;
 
       totalPendingWeight += weight;
 
@@ -300,10 +299,10 @@ export default function Dashboard() {
         `   Priority: ${task.priority} (Weight: ${weight.toFixed(2)})`,
       );
       console.log(`   Status: ${task.status}`);
-      console.log(`   Deadline: ${task.deadline || "No deadline"}`);
+      console.log("No deadline (removed feature)");
     });
 
-    console.log(`\n🧮 CALCULATION:`);
+    console.log("\\n🧮 CALCULATION:");
     console.log(`Total Completed Weight: ${totalCompletedWeight.toFixed(2)}`);
     console.log(`Total Pending Weight: ${totalPendingWeight.toFixed(2)}`);
 
@@ -313,11 +312,11 @@ export default function Dashboard() {
     if (finalTotalWeight > 0) {
       const percentage = (totalCompletedWeight / finalTotalWeight) * 100;
       console.log(
-        `Formula: (${totalCompletedWeight.toFixed(2)} / ${finalTotalWeight.toFixed(2)}) × 100 = ${percentage.toFixed(2)}%`,
+        `Formula: (${totalCompletedWeight.toFixed(2)} / ${finalTotalWeight.toFixed(2)}) x 100 = ${percentage.toFixed(2)}%`,
       );
       console.log(`Rounded: ${Math.round(percentage)}%`);
     } else {
-      console.log(`No tasks = 0% productivity`);
+      console.log("No tasks = 0% productivity");
     }
 
     console.groupEnd();
@@ -326,7 +325,7 @@ export default function Dashboard() {
   const subjectProgressData = useMemo(() => {
     return subjects
       .map((subject) => {
-        const subjectTasks = tasks.filter((t) => t.subjectId === subject.id);
+        const subjectTasks = tasks.filter((t) => t.subject_id === subject.id);
         const completedTasks = subjectTasks.filter(
           (t) => t.status === "completed",
         ).length;
@@ -411,23 +410,35 @@ export default function Dashboard() {
   return (
     <div className="p-6 lg:p-8 space-y-8 animate-fade-in">
       {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold text-foreground">
-          Good{" "}
-          {new Date().getHours() < 12
-            ? "morning"
-            : new Date().getHours() < 17
-              ? "afternoon"
-              : "evening"}
-          , {user?.name?.split(" ")[0]}!
-        </h1>
-        <p className="text-muted-foreground mt-1">
-          Here's what's happening with your studies today.
-        </p>
+      <div className="flex justify-between items-start">
+        <div>
+          <h1 className="text-3xl font-bold text-foreground">
+            Good{" "}
+            {new Date().getHours() < 12
+              ? "morning"
+              : new Date().getHours() < 17
+                ? "afternoon"
+                : "evening"}
+            , {user?.name?.split(" ")[0]}!
+          </h1>
+          <p className="text-muted-foreground mt-1">
+            Here's what's happening with your studies today.
+          </p>
+        </div>
+
+        {/* Debug Button */}
+        <Button
+          onClick={debugUser}
+          variant="outline"
+          size="sm"
+          className="text-xs"
+        >
+          🔍 Debug User Data
+        </Button>
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
         {stats.map((stat) => (
           <Card
             key={stat.label}
@@ -446,6 +457,25 @@ export default function Dashboard() {
             </CardContent>
           </Card>
         ))}
+
+        {/* Current Streak Card */}
+        {currentStreak && currentStreak.current_streak > 0 && (
+          <Card className="shadow-soft hover:shadow-md transition-shadow">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-muted text-orange-500">
+                  <TrendingUp className="w-5 h-5" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold">
+                    {currentStreak.current_streak}
+                  </p>
+                  <p className="text-xs text-muted-foreground">Day Streak 🔥</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
 
       {/* Alerts */}
@@ -462,6 +492,54 @@ export default function Dashboard() {
                 View Tasks
               </Button>
             </Link>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Recent Activity Section */}
+      {recentActivities && recentActivities.length > 0 && (
+        <Card className="shadow-soft">
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Activity className="w-5 h-5" />
+              Recent Activity
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {recentActivities.slice(0, 5).map((activity) => (
+                <div
+                  key={activity.id}
+                  className="flex items-start gap-3 pb-3 border-b last:border-0 last:pb-0"
+                >
+                  <div className="p-2 rounded-lg bg-muted">
+                    {activity.activity_type === "task_completed" && (
+                      <CheckCircle className="w-4 h-4 text-green-500" />
+                    )}
+                    {activity.activity_type === "subject_added" && (
+                      <BookOpen className="w-4 h-4 text-blue-500" />
+                    )}
+                    {activity.activity_type === "note_created" && (
+                      <FileText className="w-4 h-4 text-purple-500" />
+                    )}
+                    {activity.activity_type === "goal_completed" && (
+                      <Target className="w-4 h-4 text-orange-500" />
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate">
+                      {activity.activity_description || "Activity logged"}
+                    </p>
+                    <p className="text-xs text-muted-foreground flex items-center gap-1.5 mt-1">
+                      <Clock className="w-3 h-3 opacity-70" />
+                      <span className="font-mono bg-muted/50 px-1.5 py-0.5 rounded">
+                        {new Date(activity.created_at).toLocaleString()}
+                      </span>
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
           </CardContent>
         </Card>
       )}
@@ -737,11 +815,11 @@ export default function Dashboard() {
                     <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors cursor-pointer">
                       <div className="flex-1 min-w-0">
                         <p className="font-medium truncate">{task.title}</p>
-                        {task.subjectId &&
-                          subjects.find((s) => s.id === task.subjectId) && (
+                        {task.subject_id &&
+                          subjects.find((s) => s.id === task.subject_id) && (
                             <p className="text-xs text-muted-foreground">
                               {
-                                subjects.find((s) => s.id === task.subjectId)
+                                subjects.find((s) => s.id === task.subject_id)
                                   ?.name
                               }
                             </p>
@@ -790,20 +868,15 @@ export default function Dashboard() {
             ) : (
               <div className="space-y-4">
                 {activeProjects.slice(0, 3).map((project) => {
-                  const completedMilestones = project.milestones.filter(
-                    (m) => m.completed,
-                  ).length;
-                  const progress =
-                    project.milestones.length > 0
-                      ? (completedMilestones / project.milestones.length) * 100
-                      : 0;
+                  // Milestones feature removed
+                  const progress = 0; // No milestone tracking
 
                   return (
                     <div key={project.id} className="space-y-2">
                       <div className="flex items-center justify-between">
                         <p className="font-medium truncate">{project.name}</p>
                         <span className="text-xs text-muted-foreground">
-                          {completedMilestones}/{project.milestones.length}
+                          Progress: 0% (milestones removed)
                         </span>
                       </div>
                       <Progress value={progress} className="h-2" />
@@ -842,9 +915,14 @@ export default function Dashboard() {
                     className="p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors cursor-pointer"
                   >
                     <p className="font-medium truncate">{note.title}</p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Updated{" "}
-                      {format(parseISO(note.updatedAt), "MMM d, h:mm a")}
+                    <p className="text-xs text-muted-foreground flex items-center gap-1.5 mt-1.5">
+                      <Clock className="w-3 h-3 opacity-70" />
+                      <span className="font-mono bg-muted/30 px-1.5 py-0.5 rounded">
+                        {format(
+                          parseISO(note.updated_at || note.created_at),
+                          "MMM d, h:mm a",
+                        )}
+                      </span>
                     </p>
                   </div>
                 ))}
@@ -877,12 +955,15 @@ export default function Dashboard() {
                 {goals.slice(0, 3).map((goal) => (
                   <div key={goal.id} className="space-y-2">
                     <div className="flex items-center justify-between">
-                      <p className="font-medium truncate">{goal.name}</p>
-                      <span className="text-xs text-muted-foreground">
-                        {goal.progress}%
-                      </span>
+                      <p className="font-medium truncate">{goal.title}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {goal.progress_percentage}%
+                      </p>
                     </div>
-                    <Progress value={goal.progress} className="h-2" />
+                    <Progress
+                      value={goal.progress_percentage}
+                      className="h-2"
+                    />
                   </div>
                 ))}
               </div>

@@ -125,7 +125,9 @@
 
   body {
     @apply bg-background text-foreground antialiased;
-    font-feature-settings: "rlig" 1, "calt" 1;
+    font-feature-settings:
+      "rlig" 1,
+      "calt" 1;
   }
 
   /* Custom scrollbar */
@@ -145,6 +147,44 @@
   ::-webkit-scrollbar-thumb:hover {
     @apply bg-muted-foreground/30;
   }
+
+  /* Date and Time input icons visibility fix for dark mode */
+  input[type="date"],
+  input[type="time"],
+  input[type="datetime-local"] {
+    position: relative;
+    color-scheme: light dark;
+  }
+
+  /* Light mode - keep default dark icons */
+  input[type="date"]::-webkit-calendar-picker-indicator,
+  input[type="time"]::-webkit-calendar-picker-indicator,
+  input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+    cursor: pointer;
+    opacity: 0.7;
+    transition: opacity 0.2s;
+  }
+
+  input[type="date"]::-webkit-calendar-picker-indicator:hover,
+  input[type="time"]::-webkit-calendar-picker-indicator:hover,
+  input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover {
+    opacity: 1;
+  }
+
+  /* Dark mode - make icons bright and visible */
+  .dark input[type="date"]::-webkit-calendar-picker-indicator,
+  .dark input[type="time"]::-webkit-calendar-picker-indicator,
+  .dark input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+    filter: invert(1) brightness(1.2);
+    opacity: 0.8;
+  }
+
+  .dark input[type="date"]::-webkit-calendar-picker-indicator:hover,
+  .dark input[type="time"]::-webkit-calendar-picker-indicator:hover,
+  .dark input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover {
+    opacity: 1;
+    filter: invert(1) brightness(1.4);
+  }
 }
 
 @layer utilities {
@@ -157,8 +197,9 @@
   }
 
   .shadow-soft {
-    box-shadow: 0 2px 15px -3px hsl(var(--foreground) / 0.08),
-                0 4px 6px -4px hsl(var(--foreground) / 0.04);
+    box-shadow:
+      0 2px 15px -3px hsl(var(--foreground) / 0.08),
+      0 4px 6px -4px hsl(var(--foreground) / 0.04);
   }
 
   .shadow-glow {

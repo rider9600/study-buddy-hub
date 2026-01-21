@@ -54,9 +54,9 @@ const SUBJECT_COLORS = [
 export default function Subjects() {
   const {
     subjects,
+    subjectsLoading,
     tasks,
     notes,
-    materials,
     addSubject,
     updateSubject,
     deleteSubject,
@@ -64,6 +64,8 @@ export default function Subjects() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingSubject, setEditingSubject] = useState<Subject | null>(null);
   const [selectedSubject, setSelectedSubject] = useState<Subject | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isDeletingId, setIsDeletingId] = useState<string | null>(null);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -116,61 +118,67 @@ export default function Subjects() {
     });
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!formData.name.trim()) return;
 
-    const syllabusArray = formData.syllabus
-      .split("\n")
-      .map((s) => s.trim())
-      .filter((s) => s.length > 0);
+    setIsSubmitting(true);
 
-    if (editingSubject) {
-      updateSubject(editingSubject.id, {
-        name: formData.name,
-        facultyName: formData.facultyName || undefined,
-        timeSlots:
-          formData.timeSlots.length > 0 ? formData.timeSlots : undefined,
-        color: formData.color,
-        syllabus: syllabusArray.length > 0 ? syllabusArray : undefined,
-      });
-    } else {
-      addSubject({
-        name: formData.name,
-        facultyName: formData.facultyName || undefined,
-        timeSlots:
-          formData.timeSlots.length > 0 ? formData.timeSlots : undefined,
-        color: formData.color,
-        syllabus: syllabusArray.length > 0 ? syllabusArray : undefined,
-      });
+    try {
+      const syllabusArray = formData.syllabus
+        .split("\n")
+        .map((s) => s.trim())
+        .filter((s) => s.length > 0);
+
+      if (editingSubject) {
+        await updateSubject(editingSubject.id, {
+          name: formData.name,
+          faculty_name: formData.facultyName || undefined,
+          time_slots:
+            formData.timeSlots.length > 0 ? formData.timeSlots : undefined,
+          color: formData.color,
+          syllabus: syllabusArray.length > 0 ? syllabusArray : undefined,
+        });
+      } else {
+        await addSubject({
+          name: formData.name,
+          faculty_name: formData.facultyName || undefined,
+          time_slots:
+            formData.timeSlots.length > 0 ? formData.timeSlots : undefined,
+          color: formData.color,
+          syllabus: syllabusArray.length > 0 ? syllabusArray : undefined,
+        });
+      }
+
+      setIsDialogOpen(false);
+      resetForm();
+    } catch (error) {
+      console.error("Error saving subject:", error);
+    } finally {
+      setIsSubmitting(false);
     }
-
-    setIsDialogOpen(false);
-    resetForm();
   };
 
   const handleEdit = (subject: Subject) => {
     setEditingSubject(subject);
     setFormData({
       name: subject.name,
-      facultyName: subject.facultyName || "",
+      facultyName: subject.faculty_name || "",
       color: subject.color,
       syllabus: subject.syllabus?.join("\n") || "",
-      timeSlots: subject.timeSlots || [],
+      timeSlots: subject.time_slots || [],
     });
     setIsDialogOpen(true);
   };
 
   const getSubjectStats = (subjectId: string) => {
-    const subjectTasks = tasks.filter((t) => t.subjectId === subjectId);
-    const subjectNotes = notes.filter((n) => n.subjectId === subjectId);
-    const subjectMaterials = materials.filter((m) => m.subjectId === subjectId);
+    const subjectTasks = tasks.filter((t) => t.subject_id === subjectId);
+    const subjectNotes = notes.filter((n) => n.subject_id === subjectId);
     const pendingTasks = subjectTasks.filter((t) => t.status === "pending");
 
     return {
       totalTasks: subjectTasks.length,
       pendingTasks: pendingTasks.length,
       notes: subjectNotes.length,
-      materials: subjectMaterials.length,
     };
   };
 
@@ -366,11 +374,19 @@ export default function Subjects() {
             </div>
 
             <DialogFooter>
-              <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
+              <Button
+                variant="outline"
+                onClick={() => setIsDialogOpen(false)}
+                disabled={isSubmitting}
+              >
                 Cancel
               </Button>
-              <Button onClick={handleSubmit}>
-                {editingSubject ? "Update Subject" : "Add Subject"}
+              <Button onClick={handleSubmit} disabled={isSubmitting}>
+                {isSubmitting
+                  ? "Saving..."
+                  : editingSubject
+                    ? "Update Subject"
+                    : "Add Subject"}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -378,7 +394,14 @@ export default function Subjects() {
       </div>
 
       {/* Subject Grid */}
-      {subjects.length === 0 ? (
+      {subjectsLoading ? (
+        <Card className="shadow-soft">
+          <CardContent className="py-12 text-center">
+            <BookOpen className="w-12 h-12 mx-auto text-muted-foreground mb-4 animate-pulse" />
+            <p className="text-muted-foreground">Loading subjects...</p>
+          </CardContent>
+        </Card>
+      ) : subjects.length === 0 ? (
         <Card className="shadow-soft">
           <CardContent className="py-12 text-center">
             <BookOpen className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
@@ -425,10 +448,24 @@ export default function Subjects() {
                       <Button
                         variant="ghost"
                         size="icon"
-                        onClick={(e) => {
+                        onClick={async (e) => {
                           e.stopPropagation();
-                          deleteSubject(subject.id);
+                          if (
+                            confirm(
+                              "Are you sure you want to delete this subject?",
+                            )
+                          ) {
+                            setIsDeletingId(subject.id);
+                            try {
+                              await deleteSubject(subject.id);
+                            } catch (error) {
+                              console.error("Error deleting subject:", error);
+                            } finally {
+                              setIsDeletingId(null);
+                            }
+                          }
                         }}
+                        disabled={isDeletingId === subject.id}
                         className="h-8 w-8 text-destructive hover:text-destructive"
                       >
                         <Trash2 className="w-4 h-4" />
@@ -438,21 +475,21 @@ export default function Subjects() {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-3">
-                    {subject.facultyName && (
+                    {subject.faculty_name && (
                       <div className="flex items-center gap-2 text-sm text-muted-foreground">
                         <User className="w-4 h-4" />
-                        {subject.facultyName}
+                        {subject.faculty_name}
                       </div>
                     )}
 
-                    {subject.timeSlots && subject.timeSlots.length > 0 && (
+                    {subject.time_slots && subject.time_slots.length > 0 && (
                       <div className="space-y-2">
                         <p className="text-sm font-medium text-muted-foreground flex items-center gap-2">
                           <Clock className="w-4 h-4" />
                           Schedule
                         </p>
                         <div className="space-y-1">
-                          {subject.timeSlots.map((slot, i) => (
+                          {subject.time_slots.map((slot, i) => (
                             <div
                               key={i}
                               className="text-sm text-muted-foreground ml-6"
@@ -471,10 +508,6 @@ export default function Subjects() {
                       </Badge>
                       <Badge variant="secondary">
                         {stats.notes} note{stats.notes !== 1 ? "s" : ""}
-                      </Badge>
-                      <Badge variant="secondary">
-                        {stats.materials} material
-                        {stats.materials !== 1 ? "s" : ""}
                       </Badge>
                     </div>
 

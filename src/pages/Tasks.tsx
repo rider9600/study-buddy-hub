@@ -84,25 +84,30 @@ export default function Tasks() {
           title: formData.title,
           description: formData.description || undefined,
           priority: formData.priority,
-          subjectId:
+          frequency: formData.frequency,
+          subject_id:
             formData.subjectId === "none" ? undefined : formData.subjectId,
-          projectId:
+          project_id:
             formData.projectId === "none" ? undefined : formData.projectId,
-          goalId: formData.goalId === "none" ? undefined : formData.goalId,
+          goal_id: formData.goalId === "none" ? undefined : formData.goalId,
         });
       } else {
         console.log("Creating new task");
+        const today = new Date();
+        const localDateString = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+
         addTask({
           title: formData.title,
           description: formData.description || undefined,
           priority: formData.priority,
           status: "pending",
           frequency: formData.frequency,
-          subjectId:
+          task_date: localDateString, // Today's date in YYYY-MM-DD format using local timezone
+          subject_id:
             formData.subjectId === "none" ? undefined : formData.subjectId,
-          projectId:
+          project_id:
             formData.projectId === "none" ? undefined : formData.projectId,
-          goalId: formData.goalId === "none" ? undefined : formData.goalId,
+          goal_id: formData.goalId === "none" ? undefined : formData.goalId,
         });
       }
 
@@ -122,9 +127,9 @@ export default function Tasks() {
       description: task.description || "",
       priority: task.priority,
       frequency: task.frequency || "once",
-      subjectId: task.subjectId || "none",
-      projectId: task.projectId || "none",
-      goalId: task.goalId || "none",
+      subjectId: task.subject_id || "none",
+      projectId: task.project_id || "none",
+      goalId: task.goal_id || "none",
     });
     setIsDialogOpen(true);
   };
@@ -136,30 +141,16 @@ export default function Tasks() {
       return true;
     })
     .sort((a, b) => {
-      // Sort by deadline, then priority
-      if (a.deadline && b.deadline) {
-        return new Date(a.deadline).getTime() - new Date(b.deadline).getTime();
-      }
-      if (a.deadline) return -1;
-      if (b.deadline) return 1;
+      // Sort by priority, then creation date
       const priorityOrder = { high: 0, medium: 1, low: 2 };
-      return priorityOrder[a.priority] - priorityOrder[b.priority];
-    });
+      const priorityDiff =
+        priorityOrder[a.priority] - priorityOrder[b.priority];
+      if (priorityDiff !== 0) return priorityDiff;
 
-  // Calculate overdue tasks from previous days
-  const overdueTasks = tasks
-    .filter((task) => {
-      if (task.status === "completed" || !task.deadline) return false;
-      const taskDate = parseISO(task.deadline);
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      return taskDate < today;
-    })
-    .sort((a, b) => {
-      if (a.deadline && b.deadline) {
-        return new Date(a.deadline).getTime() - new Date(b.deadline).getTime();
-      }
-      return 0;
+      // If same priority, sort by creation date (newest first)
+      return (
+        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      );
     });
 
   const getPriorityColor = (priority: string) => {
@@ -412,11 +403,11 @@ export default function Tasks() {
                               Daily
                             </Badge>
                           )}
-                          {task.subjectId &&
-                            subjects.find((s) => s.id === task.subjectId) && (
+                          {task.subject_id &&
+                            subjects.find((s) => s.id === task.subject_id) && (
                               <Badge variant="secondary">
                                 {
-                                  subjects.find((s) => s.id === task.subjectId)
+                                  subjects.find((s) => s.id === task.subject_id)
                                     ?.name
                                 }
                               </Badge>
