@@ -275,8 +275,17 @@ export default function Subjects() {
                     <Label htmlFor="day">Day</Label>
                     <Select
                       value={newTimeSlot.day}
-                      onValueChange={(val: any) =>
-                        setNewTimeSlot({ ...newTimeSlot, day: val })
+                      onValueChange={(val) =>
+                        setNewTimeSlot({
+                          ...newTimeSlot,
+                          day: val as
+                            | "Monday"
+                            | "Tuesday"
+                            | "Wednesday"
+                            | "Thursday"
+                            | "Friday"
+                            | "Saturday",
+                        })
                       }
                     >
                       <SelectTrigger>

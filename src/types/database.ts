@@ -58,7 +58,7 @@ export type Database = {
           faculty_name: string | null;
           color: string;
           syllabus: string[] | null;
-          time_slots: any | null; // jsonb type
+          time_slots: Record<string, unknown> | null; // jsonb type
           created_at: string;
         };
         Insert: {
@@ -68,7 +68,7 @@ export type Database = {
           faculty_name?: string | null;
           color: string;
           syllabus?: string[] | null;
-          time_slots?: any | null;
+          time_slots?: Record<string, unknown> | null;
           created_at?: string;
         };
         Update: {
@@ -78,9 +78,10 @@ export type Database = {
           faculty_name?: string | null;
           color?: string;
           syllabus?: string[] | null;
-          time_slots?: any | null;
+          time_slots?: Record<string, unknown> | null;
           created_at?: string;
         };
+      };
       notes: {
         Row: {
           id: string;
@@ -245,7 +246,7 @@ export type Database = {
           entity_type: string | null;
           entity_id: string | null;
           activity_date: string;
-          metadata: any | null;
+          metadata: Record<string, unknown> | null;
           created_at: string;
         };
         Insert: {
@@ -256,7 +257,7 @@ export type Database = {
           entity_type?: string | null;
           entity_id?: string | null;
           activity_date?: string;
-          metadata?: any | null;
+          metadata?: Record<string, unknown> | null;
           created_at?: string;
         };
         Update: {
@@ -267,7 +268,7 @@ export type Database = {
           entity_type?: string | null;
           entity_id?: string | null;
           activity_date?: string;
-          metadata?: any | null;
+          metadata?: Record<string, unknown> | null;
           created_at?: string;
         };
       };

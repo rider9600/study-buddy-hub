@@ -44,10 +44,16 @@ export default function CalendarPage() {
           const monthEnd = endOfMonth(currentMonth);
 
           // Start from either the task's start date or the beginning of visible month, whichever is later
-          let currentDate = taskDate > monthStart ? taskDate : monthStart;
+          const startDate = taskDate > monthStart ? taskDate : monthStart;
+          const dayCount = Math.ceil((monthEnd.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
 
           // Add event for each day until end of month
-          while (currentDate <= monthEnd) {
+          for (let i = 0; i < dayCount; i++) {
+            const currentDate = new Date(startDate);
+            currentDate.setDate(currentDate.getDate() + i);
+
+            if (currentDate > monthEnd) break;
+
             allEvents.push({
               id: `${task.id}-${currentDate.toISOString().split("T")[0]}`,
               title: task.title,
@@ -63,7 +69,6 @@ export default function CalendarPage() {
                       ? "#f59e0b"
                       : "#6b7280",
             });
-            currentDate.setDate(currentDate.getDate() + 1);
           }
         } else {
           // One-time tasks - show only on their specific date
@@ -105,8 +110,14 @@ export default function CalendarPage() {
             "Saturday",
           ].indexOf(timeSlot.day);
 
-          let currentDate = new Date(monthStart);
-          while (currentDate <= monthEnd) {
+          const dayCount = Math.ceil((monthEnd.getTime() - monthStart.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+
+          for (let i = 0; i < dayCount; i++) {
+            const currentDate = new Date(monthStart);
+            currentDate.setDate(currentDate.getDate() + i);
+
+            if (currentDate > monthEnd) break;
+
             if (currentDate.getDay() === dayOfWeek) {
               const classDateTime = new Date(currentDate);
               const [hours, minutes] = timeSlot.startTime
@@ -123,7 +134,6 @@ export default function CalendarPage() {
                 color: subject.color,
               });
             }
-            currentDate.setDate(currentDate.getDate() + 1);
           }
         });
       }

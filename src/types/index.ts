@@ -112,7 +112,7 @@ export interface ActivityLog {
   entity_type: string | null;
   entity_id: string | null;
   activity_date: string;
-  metadata: any | null;
+  metadata: Record<string, unknown> | null;
   created_at: string;
 }
 

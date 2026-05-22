@@ -96,7 +96,7 @@ export default function Dashboard() {
     });
 
     // Weight system for different priorities
-    const getTaskWeight = (task: any) => {
+    const getTaskWeight = (task: Task) => {
       let weight = 1; // Base weight
 
       // Priority weights
@@ -171,7 +171,7 @@ export default function Dashboard() {
       }
 
       // Get additional info for tooltip
-      const dayName = format(day, "EEEE") as any;
+      const dayName = format(day, "EEEE");
       const studySessions = subjects.reduce((count, subject) => {
         if (!subject.time_slots) return count;
         return (
@@ -204,7 +204,7 @@ export default function Dashboard() {
   }, [tasks, subjects, notes, productivityView]);
 
   // Debug function to show productivity calculation breakdown
-  const logProductivityBreakdown = (dayData: any) => {
+  const logProductivityBreakdown = (dayData: Record<string, unknown>) => {
     console.group(`🔍 PRODUCTIVITY BREAKDOWN - ${dayData.fullDate}`);
 
     const dayStart = new Date(dayData.fullDate);
@@ -306,7 +306,7 @@ export default function Dashboard() {
     console.log(`Total Completed Weight: ${totalCompletedWeight.toFixed(2)}`);
     console.log(`Total Pending Weight: ${totalPendingWeight.toFixed(2)}`);
 
-    let finalTotalWeight = Math.max(totalCompletedWeight, totalPendingWeight);
+    const finalTotalWeight = Math.max(totalCompletedWeight, totalPendingWeight);
     console.log(`Final Total Weight: ${finalTotalWeight.toFixed(2)}`);
 
     if (finalTotalWeight > 0) {

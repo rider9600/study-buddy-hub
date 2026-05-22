@@ -36,11 +36,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const convertToUser = (sUser: SupabaseUser | null): User | null => {
     if (!sUser) return null;
+    const metadata = sUser.user_metadata as Record<string, unknown> | undefined;
     return {
       id: sUser.id,
       email: sUser.email ?? "",
       name:
-        (sUser.user_metadata as any)?.name ??
+        (metadata?.name as string | undefined) ??
         sUser.email?.split("@")[0] ??
         "User",
       createdAt: sUser.created_at ?? new Date().toISOString(),
@@ -50,7 +51,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const debugUser = useCallback(() => {
     // Lightweight debug helper which is safe to call in non-browser environments
     if (typeof window === "undefined") return;
-    // eslint-disable-next-line no-console
     console.group("Auth Debug");
     console.log("appUser:", user);
     console.log("supabaseUser:", supabaseUser);
@@ -70,7 +70,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       } catch (err) {
         // Don't crash app on session retrieval errors
-        // eslint-disable-next-line no-console
         console.warn("Failed to get initial session:", err);
       } finally {
         if (mounted) setIsLoading(false);

@@ -176,7 +176,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       description: string,
       entityType?: string,
       entityId?: string,
-      metadata?: any,
+      metadata?: Record<string, unknown>,
     ) => {
       if (!user?.id) return;
 
