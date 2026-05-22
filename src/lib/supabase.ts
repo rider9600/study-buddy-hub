@@ -1,49 +1,46 @@
-import { createClient } from '@supabase/supabase-js'
-import type { Database } from '@/types/database'
+import { createClient } from "@supabase/supabase-js";
+import type { Database } from "@/types/database";
 
-// Get environment variables
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+// Read Vite env vars
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
 
-// Validate environment variables
-if (!supabaseUrl) {
-  throw new Error('Missing VITE_SUPABASE_URL environment variable')
+if (!supabaseUrl || !supabaseAnonKey) {
+  // Throwing during module initialization helps catch misconfiguration early in builds.
+  throw new Error("Missing VITE_SUPABASE_URL or VITE_SUPABASE_ANON_KEY environment variable");
 }
 
-if (!supabaseAnonKey) {
-  throw new Error('Missing VITE_SUPABASE_ANON_KEY environment variable')
-}
-
-// Create Supabase client instance
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+// Create typed Supabase client
+export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
   auth: {
     autoRefreshToken: true,
     persistSession: true,
-    detectSessionInUrl: true
+    detectSessionInUrl: true,
   },
   realtime: {
     params: {
-      eventsPerSecond: 10
-    }
-  }
-})
+      eventsPerSecond: 10,
+    },
+  },
+});
 
-// Helper function to get current user
+// Helper to get current user (returns null on error)
 export const getCurrentUser = async () => {
-  const { data: { user }, error } = await supabase.auth.getUser()
+  const { data, error } = await supabase.auth.getUser();
   if (error) {
-    console.error('Error getting current user:', error)
-    return null
+    // Keep logging concise and non-blocking
+    console.warn("getCurrentUser error:", error.message);
+    return null;
   }
-  return user
-}
+  return data?.user ?? null;
+};
 
-// Helper function to get current session
+// Helper to get current session (returns null on error)
 export const getCurrentSession = async () => {
-  const { data: { session }, error } = await supabase.auth.getSession()
+  const { data, error } = await supabase.auth.getSession();
   if (error) {
-    console.error('Error getting current session:', error)
-    return null
+    console.warn("getCurrentSession error:", error.message);
+    return null;
   }
-  return session
-}
+  return data?.session ?? null;
+};

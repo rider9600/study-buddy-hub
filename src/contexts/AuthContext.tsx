@@ -5,11 +5,11 @@ import React, {
   useEffect,
   useCallback,
 } from "react";
-import { User as SupabaseUser } from "@supabase/supabase-js";
+import type { User as SupabaseUser } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabase";
 import type { User } from "@/types";
 
-interface AuthContextType {
+export interface AuthContextType {
   user: User | null;
   supabaseUser: SupabaseUser | null;
   isAuthenticated: boolean;
@@ -24,148 +24,131 @@ interface AuthContextType {
     name: string,
   ) => Promise<{ success: boolean; error?: string }>;
   logout: () => Promise<void>;
-  debugUser: () => void; // Debug function to check user data
+  debugUser: () => void;
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [supabaseUser, setSupabaseUser] = useState<SupabaseUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Convert Supabase user to our User type
-  const convertToUser = (supabaseUser: SupabaseUser): User => ({
-    id: supabaseUser.id,
-    email: supabaseUser.email || "",
-    name:
-      supabaseUser.user_metadata?.name ||
-      supabaseUser.email?.split("@")[0] ||
-      "User",
-    createdAt: supabaseUser.created_at || new Date().toISOString(),
-  });
+  const convertToUser = (sUser: SupabaseUser | null): User | null => {
+    if (!sUser) return null;
+    return {
+      id: sUser.id,
+      email: sUser.email ?? "",
+      name:
+        (sUser.user_metadata as any)?.name ??
+        sUser.email?.split("@")[0] ??
+        "User",
+      createdAt: sUser.created_at ?? new Date().toISOString(),
+    };
+  };
 
-  // Debug function to log user information
   const debugUser = useCallback(() => {
-    console.group("🔍 User Debug Information");
-    console.log("Current User (App):", user);
-    console.log("Supabase User (Raw):", supabaseUser);
-    console.log("Is Authenticated:", !!user);
-    console.log("User ID:", user?.id);
-    console.log("Email:", user?.email);
-    console.log("Name:", user?.name);
+    // Lightweight debug helper which is safe to call in non-browser environments
+    if (typeof window === "undefined") return;
+    // eslint-disable-next-line no-console
+    console.group("Auth Debug");
+    console.log("appUser:", user);
+    console.log("supabaseUser:", supabaseUser);
     console.groupEnd();
   }, [user, supabaseUser]);
 
   useEffect(() => {
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) {
-        setSupabaseUser(session.user);
-        setUser(convertToUser(session.user));
-        console.log("✅ Initial session found:", session.user.email);
-      } else {
-        console.log("ℹ️ No initial session found");
+    let mounted = true;
+
+    (async () => {
+      try {
+        const { data } = await supabase.auth.getSession();
+        const session = data?.session ?? null;
+        if (mounted && session?.user) {
+          setSupabaseUser(session.user);
+          setUser(convertToUser(session.user));
+        }
+      } catch (err) {
+        // Don't crash app on session retrieval errors
+        // eslint-disable-next-line no-console
+        console.warn("Failed to get initial session:", err);
+      } finally {
+        if (mounted) setIsLoading(false);
       }
-      setIsLoading(false);
-    });
+    })();
 
-    // Listen for auth changes
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log("🔄 Auth state change:", event);
-
+    const listener = supabase.auth.onAuthStateChange((_event, session) => {
       if (session?.user) {
-        setSupabaseUser(session.user);
-        setUser(convertToUser(session.user));
-        console.log("✅ User logged in:", session.user.email);
+        const s = session.user;
+        setSupabaseUser(s);
+        setUser(convertToUser(s));
       } else {
         setSupabaseUser(null);
         setUser(null);
-        console.log("👋 User logged out");
       }
       setIsLoading(false);
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      mounted = false;
+      // Safely unsubscribe if available
+      try {
+        listener?.data?.subscription?.unsubscribe?.();
+      } catch (e) {
+        // ignore
+      }
+    };
   }, []);
 
-  const login = useCallback(
-    async (
-      email: string,
-      password: string,
-    ): Promise<{ success: boolean; error?: string }> => {
-      try {
-        setIsLoading(true);
-        console.log("🔐 Attempting login for:", email);
-
-        const { data, error } = await supabase.auth.signInWithPassword({
-          email,
-          password,
-        });
-
-        if (error) {
-          console.error("❌ Login failed:", error.message);
-          return { success: false, error: error.message };
-        }
-
-        if (data.user) {
-          setSupabaseUser(data.user);
-          setUser(convertToUser(data.user));
-          console.log("✅ Login successful:", data.user.email);
-        }
-
-        return { success: true };
-      } catch (error) {
-        console.error("❌ Login error:", error);
-        return { success: false, error: "An unexpected error occurred" };
-      } finally {
-        setIsLoading(false);
+  const login = useCallback(async (email: string, password: string) => {
+    setIsLoading(true);
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+      if (error) return { success: false, error: error.message };
+      if (data.user) {
+        setSupabaseUser(data.user);
+        setUser(convertToUser(data.user));
       }
-    },
-    [],
-  );
+      return { success: true };
+    } catch (err) {
+      return {
+        success: false,
+        error: (err as Error).message ?? "Unknown error",
+      };
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
 
   const signup = useCallback(
-    async (
-      email: string,
-      password: string,
-      name: string,
-    ): Promise<{ success: boolean; error?: string }> => {
+    async (email: string, password: string, name: string) => {
+      setIsLoading(true);
       try {
-        setIsLoading(true);
-        console.log("📝 Attempting signup for:", email);
-
         const { data, error } = await supabase.auth.signUp({
           email,
           password,
-          options: {
-            data: {
-              name: name,
-            },
-          },
+          options: { data: { name } },
         });
 
-        if (error) {
-          console.error("❌ Signup failed:", error.message);
-          return { success: false, error: error.message };
-        }
+        if (error) return { success: false, error: error.message };
 
-        if (data.user) {
-          console.log("✅ Signup successful:", data.user.email);
-          console.log("📧 Check email for verification");
-
-          // Sign out immediately to require email verification before login
+        // After signup, Supabase may return a user object depending on settings.
+        // We sign out to require email verification if that is the configured flow.
+        if (data?.user) {
           await supabase.auth.signOut();
           setSupabaseUser(null);
           setUser(null);
         }
 
         return { success: true };
-      } catch (error) {
-        console.error("❌ Signup error:", error);
-        return { success: false, error: "An unexpected error occurred" };
+      } catch (err) {
+        return {
+          success: false,
+          error: (err as Error).message ?? "Unknown error",
+        };
       } finally {
         setIsLoading(false);
       }
@@ -175,13 +158,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = useCallback(async () => {
     try {
-      console.log("👋 Logging out user");
       await supabase.auth.signOut();
+    } finally {
       setSupabaseUser(null);
       setUser(null);
-      console.log("✅ Logout successful");
-    } catch (error) {
-      console.error("❌ Logout error:", error);
+      setIsLoading(false);
     }
   }, []);
 
@@ -203,10 +184,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   );
 }
 
-export function useAuth() {
+export function useAuth(): AuthContextType {
   const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error("useAuth must be used within an AuthProvider");
-  }
+  if (!context) throw new Error("useAuth must be used within an AuthProvider");
   return context;
 }

@@ -136,8 +136,42 @@ export default function Tasks() {
 
   const filteredTasks = tasks
     .filter((task) => {
-      if (filter === "pending") return task.status === "pending";
-      if (filter === "completed") return task.status === "completed";
+      if (filter === "pending") {
+        // Show tasks that are pending
+        if (task.status === "pending") return true;
+
+        // For daily tasks, show them as pending if they were completed on a previous day
+        if (
+          task.frequency === "daily" &&
+          task.status === "completed" &&
+          task.completed_at
+        ) {
+          const completedDate = format(
+            parseISO(task.completed_at),
+            "yyyy-MM-dd",
+          );
+          const today = format(new Date(), "yyyy-MM-dd");
+          return completedDate !== today; // Show if completed on a different day
+        }
+
+        return false;
+      }
+      if (filter === "completed") {
+        // For daily tasks, only show as completed if completed today
+        if (
+          task.frequency === "daily" &&
+          task.status === "completed" &&
+          task.completed_at
+        ) {
+          const completedDate = format(
+            parseISO(task.completed_at),
+            "yyyy-MM-dd",
+          );
+          const today = format(new Date(), "yyyy-MM-dd");
+          return completedDate === today; // Only show if completed today
+        }
+        return task.status === "completed";
+      }
       return true;
     })
     .sort((a, b) => {
@@ -331,10 +365,49 @@ export default function Tasks() {
       <Tabs value={filter} onValueChange={(v) => setFilter(v as typeof filter)}>
         <TabsList>
           <TabsTrigger value="pending">
-            Pending ({tasks.filter((t) => t.status === "pending").length})
+            Pending (
+            {
+              tasks.filter((t) => {
+                if (t.status === "pending") return true;
+                // Count daily tasks completed on previous days as pending
+                if (
+                  t.frequency === "daily" &&
+                  t.status === "completed" &&
+                  t.completed_at
+                ) {
+                  const completedDate = format(
+                    parseISO(t.completed_at),
+                    "yyyy-MM-dd",
+                  );
+                  const today = format(new Date(), "yyyy-MM-dd");
+                  return completedDate !== today;
+                }
+                return false;
+              }).length
+            }
+            )
           </TabsTrigger>
           <TabsTrigger value="completed">
-            Completed ({tasks.filter((t) => t.status === "completed").length})
+            Completed (
+            {
+              tasks.filter((t) => {
+                // For daily tasks, only count as completed if completed today
+                if (
+                  t.frequency === "daily" &&
+                  t.status === "completed" &&
+                  t.completed_at
+                ) {
+                  const completedDate = format(
+                    parseISO(t.completed_at),
+                    "yyyy-MM-dd",
+                  );
+                  const today = format(new Date(), "yyyy-MM-dd");
+                  return completedDate === today;
+                }
+                return t.status === "completed";
+              }).length
+            }
+            )
           </TabsTrigger>
           <TabsTrigger value="all">All ({tasks.length})</TabsTrigger>
         </TabsList>
@@ -355,90 +428,104 @@ export default function Tasks() {
             </CardContent>
           </Card>
         ) : (
-          filteredTasks.map((task) => (
-            <Card
-              key={task.id}
-              className={`shadow-soft transition-all hover:shadow-md ${
-                task.status === "completed" ? "opacity-60" : ""
-              }`}
-            >
-              <CardContent className="p-4">
-                <div className="flex items-start gap-3">
-                  <button
-                    onClick={() =>
-                      task.status === "pending" && completeTask(task.id)
-                    }
-                    className="mt-0.5 shrink-0"
-                    disabled={task.status === "completed"}
-                  >
-                    {task.status === "completed" ? (
-                      <CheckCircle2 className="w-5 h-5 text-success" />
-                    ) : (
-                      <Circle className="w-5 h-5 text-muted-foreground hover:text-primary transition-colors" />
-                    )}
-                  </button>
+          filteredTasks.map((task) => {
+            // For daily tasks completed on a previous day, treat as pending for display
+            const isDailyTaskCompletedPreviously =
+              task.frequency === "daily" &&
+              task.status === "completed" &&
+              task.completed_at &&
+              format(parseISO(task.completed_at), "yyyy-MM-dd") !==
+                format(new Date(), "yyyy-MM-dd");
 
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between gap-4">
-                      <div>
-                        <h3
-                          className={`font-medium ${task.status === "completed" ? "line-through" : ""}`}
-                        >
-                          {task.title}
-                        </h3>
-                        {task.description && (
-                          <p className="text-sm text-muted-foreground mt-1">
-                            {task.description}
-                          </p>
-                        )}
-                        <div className="flex flex-wrap items-center gap-2 mt-2">
-                          <Badge
-                            variant="outline"
-                            className={getPriorityColor(task.priority)}
+            const isTaskCompleted =
+              task.status === "completed" && !isDailyTaskCompletedPreviously;
+
+            return (
+              <Card
+                key={task.id}
+                className={`shadow-soft transition-all hover:shadow-md ${
+                  isTaskCompleted ? "opacity-60" : ""
+                }`}
+              >
+                <CardContent className="p-4">
+                  <div className="flex items-start gap-3">
+                    <button
+                      onClick={() => !isTaskCompleted && completeTask(task.id)}
+                      className="mt-0.5 shrink-0"
+                      disabled={isTaskCompleted}
+                    >
+                      {isTaskCompleted ? (
+                        <CheckCircle2 className="w-5 h-5 text-success" />
+                      ) : (
+                        <Circle className="w-5 h-5 text-muted-foreground hover:text-primary transition-colors" />
+                      )}
+                    </button>
+
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between gap-4">
+                        <div>
+                          <h3
+                            className={`font-medium ${isTaskCompleted ? "line-through" : ""}`}
                           >
-                            {task.priority}
-                          </Badge>
-                          {task.frequency === "daily" && (
-                            <Badge variant="secondary" className="text-xs">
-                              Daily
-                            </Badge>
+                            {task.title}
+                          </h3>
+                          {task.description && (
+                            <p className="text-sm text-muted-foreground mt-1">
+                              {task.description}
+                            </p>
                           )}
-                          {task.subject_id &&
-                            subjects.find((s) => s.id === task.subject_id) && (
-                              <Badge variant="secondary">
-                                {
-                                  subjects.find((s) => s.id === task.subject_id)
-                                    ?.name
-                                }
+                          <div className="flex flex-wrap items-center gap-2 mt-2">
+                            <Badge
+                              variant="outline"
+                              className={getPriorityColor(task.priority)}
+                            >
+                              {task.priority}
+                            </Badge>
+                            {task.frequency === "daily" && (
+                              <Badge variant="secondary" className="text-xs">
+                                Daily
                               </Badge>
                             )}
+                            {task.subject_id &&
+                              subjects.find(
+                                (s) => s.id === task.subject_id,
+                              ) && (
+                                <Badge variant="secondary">
+                                  {
+                                    subjects.find(
+                                      (s) => s.id === task.subject_id,
+                                    )?.name
+                                  }
+                                </Badge>
+                              )}
+                          </div>
                         </div>
-                      </div>
 
-                      <div className="flex items-center gap-1 shrink-0">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleEdit(task)}
-                          className="h-8 w-8"
-                        >
-                          <Edit className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => deleteTask(task.id)}
-                          className="h-8 w-8 text-destructive hover:text-destructive"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
+                        <div className="flex items-center gap-1 shrink-0">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleEdit(task)}
+                            className="h-8 w-8"
+                          >
+                            <Edit className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => deleteTask(task.id)}
+                            className="h-8 w-8 text-destructive hover:text-destructive"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))
+                </CardContent>
+              </Card>
+            );
+          })
         )}
       </div>
     </div>
