@@ -45,7 +45,11 @@ export default function CalendarPage() {
 
           // Start from either the task's start date or the beginning of visible month, whichever is later
           const startDate = taskDate > monthStart ? taskDate : monthStart;
-          const dayCount = Math.ceil((monthEnd.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+          const dayCount =
+            Math.ceil(
+              (monthEnd.getTime() - startDate.getTime()) /
+                (1000 * 60 * 60 * 24),
+            ) + 1;
 
           // Add event for each day until end of month
           for (let i = 0; i < dayCount; i++) {
@@ -110,7 +114,11 @@ export default function CalendarPage() {
             "Saturday",
           ].indexOf(timeSlot.day);
 
-          const dayCount = Math.ceil((monthEnd.getTime() - monthStart.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+          const dayCount =
+            Math.ceil(
+              (monthEnd.getTime() - monthStart.getTime()) /
+                (1000 * 60 * 60 * 24),
+            ) + 1;
 
           for (let i = 0; i < dayCount; i++) {
             const currentDate = new Date(monthStart);
