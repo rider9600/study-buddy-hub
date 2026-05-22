@@ -413,13 +413,7 @@ export default function Dashboard() {
       <div className="flex justify-between items-start">
         <div>
           <h1 className="text-3xl font-bold text-foreground">
-            Good{" "}
-            {new Date().getHours() < 12
-              ? "morning"
-              : new Date().getHours() < 17
-                ? "afternoon"
-                : "evening"}
-            , {user?.name?.split(" ")[0]}!
+            Welcome back to new version, {user?.name?.split(" ")[0]}! ✨
           </h1>
           <p className="text-muted-foreground mt-1">
             Here's what's happening with your studies today.
